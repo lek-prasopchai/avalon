@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Avalon</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: radial-gradient(#968b7e, #695f56);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .logo {
+            max-width: 75vw;
+            max-height: 15vh;
+        }
+
+        .role-grid {
+            display: grid;
+            grid-auto-flow: column;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: repeat(2, minmax(0, 1fr));
+            gap: 15px;
+            height: 40%;
+        }
+    
+        .role-card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 5px solid transparent;
+            opacity: 0.5;
+            /* width: 100px; */
+            /* aspect-ratio: 0.64 / 1; */
+        }
+    
+        .role-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+    
+        .role-card input {
+            display: none;
+        }
+    
+        .role-card:has(input:checked) {
+            border-color: #fde295;
+            opacity: 1;
+        }
+    
+        .role-card input:disabled+img {
+            filter: grayscale(75%);
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        button {
+            padding: 12px 28px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50rem;
+            cursor: pointer;
+            border: 3px solid #fff;
+            background-color: #00000080;
+            color: white;
+        }
+    
+        button:hover {
+            transform: scale(1.05);
+        }
+    
+        #scriptText {
+            font-size: 22px;
+            height: 30%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div>
+            <img src="images/logo.png" alt="Logo" class="logo">
+        </div>
+        <div class="role-grid">
+            <label class="role-card">
+                <input type="checkbox" name="roles" value="Merlin" checked disabled>
+                <img src="images/merlin.png" alt="Merlin">
+            </label>
+            <label class="role-card">
+                <input type="checkbox" name="roles" value="Assassin" checked disabled>
+                <img src="images/assassin.png" alt="Assassin">
+            </label>
+            <label class="role-card">
+                <input type="checkbox" name="roles" value="Percival">
+                <img src="images/percival.png" alt="Percival">
+            </label>
+            <label class="role-card">
+                <input type="checkbox" name="roles" value="Morgana" disabled>
+                <img src="images/morgana.png" alt="Morgana">
+            </label>
+            <label class="role-card">
+                <input type="checkbox" name="roles" value="Mordred">
+                <img src="images/mordred.png" alt="Mordred">
+            </label>
+            <label class="role-card">
+                <input type="checkbox" name="roles" value="Oberon">
+                <img src="images/oberon.png" alt="Oberon">
+            </label>
+        </div>
+        <div id="scriptText"></div>
+        <div class="btn-group">
+            <button id="playBtn" class="play">เล่น</button>
+            <button id="pauseBtn" class="pause" style="display:none;">หยุด</button>
+            <button id="endBtn" class="end" style="display:none;">จบ</button>
+        </div>
+        <audio id="player"></audio>
+        <audio id="bgm" src="audio/bgm.mp3" loop></audio>
+    </div>
+
+    <script>
+        // ===== STATE MACHINE =====
+        const STATE = {
+            IDLE: "idle",
+            PLAYING: "playing",
+            WAITING: "waiting",
+            PAUSED: "paused"
+        };
+
+        let state = STATE.IDLE;
+        let dialogue = [];
+        let current = 0;
+
+        let startDelayTimeout = null;
+        let defaultDelay = 0;
+        let delayRemaining = 0;
+        let delayTimeout = null;
+        let delayStart = 0;
+
+        const player = document.getElementById("player");
+        const scriptText = document.getElementById("scriptText");
+        const playBtn = document.getElementById("playBtn");
+        const pauseBtn = document.getElementById("pauseBtn");
+        const endBtn = document.getElementById("endBtn");
+
+        const bgm = document.getElementById("bgm");
+
+        function buildDialogue() {
+            // ดึง roles ที่ถูกเลือก
+            const roles = Array.from(document.querySelectorAll('input[name="roles"]:checked'))
+                .map(cb => cb.value);
+
+            dialogue = [];
+
+            dialogue.push({
+                scripts: "ทุกคนหลับตาพร้อมกับกำมือไว้หน้าตัวเอง",
+                audio: "audio/sound1.mp3",
+                // delay: 3000
+            });
+
+            // Oberon
+            if (roles.includes("Oberon")) {
+                dialogue.push({
+                    scripts: "บริวารของมอร์เดร็ดทุกคนยกเว้นโอเบรอนลืมตา และมองรอบๆ เพื่อจดจำพรรคพวกของตนเอง",
+                    audio: "audio/sound2.mp3",
+                    delay: 3000
+                });
+            } else {
+                dialogue.push({
+                    scripts: "บริวารของมอร์เดร็ดทุกคนลืมตา และมองรอบๆ เพื่อจดจำพรรคพวกของตนเอง",
+                    audio: "audio/sound3.mp3",
+                    delay: 3000
+                });
+            }
+
+            dialogue.push({
+                scripts: "บริวารของมอร์เดร็ดหลับตา",
+                audio: "audio/sound4.mp3",
+                // delay: 2000
+            });
+
+            // dialogue.push({
+            //     scripts: "ผู้เล่นทุกคนจะต้องหลับตาให้สนิทและกำมือไว้ข้างหน้าของตน",
+            //     audio: "audio/sound5.mp3",
+            //     delay: 3000
+            // });
+
+            // Mordred
+            if (roles.includes("Mordred")) {
+                dialogue.push({
+                    scripts: "บริวารของมอร์เดร็ดยกเว้นมอร์เดร็ดชูนิ้วโป้งขึ้นมา เพื่อที่เมอร์ลินจะได้เห็นทุกคน",
+                    audio: "audio/sound6.mp3",
+                    delay: 2000
+                });
+            } else {
+                dialogue.push({
+                    scripts: "บริวารของมอร์เดร็ดชูนิ้วโป้งขึ้นมา เพื่อที่เมอร์ลินจะได้เห็นทุกคน",
+                    audio: "audio/sound7.mp3",
+                    delay: 2000
+                });
+            }
+
+            dialogue.push({
+                scripts: "เมอร์ลิน ลืมตาและมองตัวแทนของฝ่ายร้าย",
+                audio: "audio/sound8.mp3",
+                delay: 3000
+            });
+
+            dialogue.push({
+                scripts: "บริวารของมอร์เดร็ดเก็บนิ้วโป้ง แล้วกำมือ",
+                audio: "audio/sound9.mp3",
+                // delay: 2000
+            });
+
+            dialogue.push({
+                scripts: "เมอร์ลินหลับตาได้",
+                audio: "audio/sound10.mp3",
+                // delay: 2000
+            });
+
+            // Percival
+            if (roles.includes("Percival")) {
+                // Morgana
+                if (roles.includes("Morgana")) {
+                    dialogue.push({
+                        scripts: "เมอร์ลินและมอร์กานาชูนิ้วโป้ง เพื่อที่เพอร์ชีวอลจะได้มองเห็น",
+                        audio: "audio/sound11.mp3",
+                        delay: 2000
+                    });
+
+                    dialogue.push({
+                        scripts: "เพอร์ชีวอลลืมตามามอง หนึ่งในนี้คือเมอร์ลินและอีกคนคือมอร์กานา",
+                        audio: "audio/sound12.mp3",
+                        delay: 3000
+                    });
+
+                    dialogue.push({
+                        scripts: "เมอร์ลินและมอร์กานาเก็บนิ้วและกำมือไว้หน้าตัวเอง",
+                        audio: "audio/sound13.mp3",
+                        // delay: 2000
+                    });
+                } else {
+                    dialogue.push({
+                        scripts: "เมอร์ลินชูนิ้วโป้ง เพื่อที่เพอร์ชีวอลจะได้มองเห็น",
+                        audio: "audio/sound14.mp3",
+                        delay: 2000
+                    });
+
+                    dialogue.push({
+                        scripts: "เพอร์ชีวอลลืมตามามอง นี่คือเมอร์ลิน",
+                        audio: "audio/sound15.mp3",
+                        delay: 3000
+                    });
+
+                    dialogue.push({
+                        scripts: "เมอร์ลินเก็บนิ้วและกำมือไว้หน้าตัวเอง",
+                        audio: "audio/sound16.mp3",
+                        // delay: 2000
+                    });
+                }
+
+                dialogue.push({
+                    scripts: "เพอร์ชีวอลหลับตา",
+                    audio: "audio/sound17.mp3",
+                    // delay: 2000
+                });
+            }
+
+            dialogue.push({
+                scripts: "ทุกคนลืมตาได้",
+                audio: "audio/sound18.mp3",
+                // delay: 3000
+            });
+        }
+        
+        // ===== PLAY BUTTON =====
+        playBtn.onclick = () => {
+            buildDialogue();
+            current = 0;
+
+            bgm.currentTime = 0;
+            bgm.volume = 0.3;
+            bgm.play();
+
+            scriptText.innerHTML = "เตรียมตัว...";
+            playBtn.style.display = "none";
+            endBtn.style.display = "inline-block";
+            
+            startDelayTimeout = setTimeout(() => {
+                pauseBtn.style.display = "inline-block";
+                playCurrent();
+            }, 3000);
+        };
+
+        // ===== PLAY STEP =====
+        function playCurrent() {
+            if (current >= dialogue.length) {
+                endGame();
+                return;
+            }
+
+            state = STATE.PLAYING;
+
+            scriptText.innerHTML = dialogue[current].scripts;
+            player.src = dialogue[current].audio;
+            player.play();
+        }
+
+        // ===== AUDIO END =====
+        player.onended = () => {
+            state = STATE.WAITING;
+            
+            delayRemaining = dialogue[current].delay ?? defaultDelay;
+            delayStart = Date.now();
+
+            delayTimeout = setTimeout(nextStep, delayRemaining);
+        };
+
+        // ===== NEXT =====
+        function nextStep() {
+            current++;
+            playCurrent();
+        }
+
+        // ===== PAUSE / RESUME =====
+        pauseBtn.onclick = () => {
+            if (state === STATE.PLAYING) {
+                player.pause();
+                bgm.pause();
+                state = STATE.PAUSED;
+                pauseBtn.innerText = "เล่นต่อ";
+            } else if (state === STATE.WAITING) {
+                bgm.pause();
+                clearTimeout(delayTimeout);
+                const elapsed = Date.now() - delayStart;
+                delayRemaining -= elapsed;
+                state = STATE.PAUSED;
+                pauseBtn.innerText = "เล่นต่อ";
+            } else if (state === STATE.PAUSED) {
+                if (player.currentTime > 0 && player.currentTime < player.duration) {
+                    player.play();
+                    bgm.play();
+                    state = STATE.PLAYING;
+                } else if (delayRemaining > 0) {
+                    bgm.play();
+                    state = STATE.WAITING;
+                    delayStart = Date.now();
+                    delayTimeout = setTimeout(nextStep, delayRemaining);
+                }
+
+                pauseBtn.innerText = "หยุด";
+            }
+        };
+
+        // ===== END GAME =====
+        endBtn.onclick = endGame;
+
+        function endGame() {
+            clearTimeout(startDelayTimeout);
+            clearTimeout(delayTimeout);
+
+            player.pause();
+            player.currentTime = 0;
+
+            bgm.pause();
+            bgm.currentTime = 0;
+            
+            state = STATE.IDLE;
+
+            current = 0;
+            scriptText.innerHTML = "";
+
+            playBtn.style.display = "inline-block";
+            pauseBtn.style.display = "none";
+            endBtn.style.display = "none";
+            pauseBtn.innerText = "หยุด";
+        }
+
+        // ===== ROLE CONDITION CONTROL =====
+        const percivalCheckbox = document.querySelector('input[value="Percival"]');
+        const morganaCheckbox = document.querySelector('input[value="Morgana"]');
+
+        morganaCheckbox.disabled = true;
+
+        percivalCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+                morganaCheckbox.disabled = false;
+            } else {
+                morganaCheckbox.checked = false;
+                morganaCheckbox.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
