@@ -1,420 +1,564 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avalon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            /* darker, moodier mid-tone palette */
+            --bg:            #1c2230;
+            --bg-deep:       #141925;
+            --bg-card:       #232b3d;
+            --blue:          #5b9ee8;
+            --blue-dim:      #3a6fb0;
+            --blue-glow:     rgba(91,158,232,0.40);
+            --crimson:       #e05a5a;
+            --crimson-dim:   #b03030;
+            --crimson-glow:  rgba(224,90,90,0.38);
+            --green:         #5cba7a;
+            --text-main:     #f0ede4;
+            --text-mid:      #c9c5ba;
+            --text-muted:    #8b92a8;
+            --noise-op:      0.035;
         }
 
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
+        html, body { height: 100%; overflow: hidden; }
 
         body {
-            background: radial-gradient(#968b7e, #695f56);
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        #container {
-            height: 100%;
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(ellipse 75% 55% at 50% -5%,  rgba(91,158,232,0.13) 0%, transparent 60%),
+                radial-gradient(ellipse 55% 45% at 95% 105%, rgba(224,90,90,0.10) 0%, transparent 55%),
+                radial-gradient(ellipse 40% 35% at 0% 50%,   rgba(91,158,232,0.06) 0%, transparent 60%),
+                repeating-linear-gradient(115deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+            color: var(--text-main);
+            font-family: 'Noto Serif Thai', serif;
+            font-weight: 400;
             display: flex;
             flex-direction: column;
+            align-items: center;
             justify-content: space-between;
+            height: 100dvh;
+            padding-top: max(env(safe-area-inset-top, 0px), 12px);
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+            padding-left: 16px;
+            padding-right: 16px;
+            position: relative;
         }
 
+        /* subtle vignette */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 55%, rgba(8,10,16,0.45) 100%);
+            z-index: 0;
+        }
+        body > * { position: relative; z-index: 1; }
+
+        /* ── LOGO ── */
+        .logo-wrap {
+            flex-shrink: 0; padding: 8px 0 6px;
+            animation: logoFloat 5s ease-in-out infinite;
+        }
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-4px); }
+        }
         .logo {
-            max-width: 75vw;
-            max-height: 15vh;
+            max-width: 50vw;
+            max-height: 11vh;
+            object-fit: contain;
+            filter: drop-shadow(0 0 18px rgba(91,158,232,0.45)) drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+        }
+
+        /* ════════════════════════════════
+           PHASE 1 — SETUP
+        ════════════════════════════════ */
+        #setupPhase {
+            width: 100%; max-width: 480px;
+            flex: 1;
+            display: flex; flex-direction: column; justify-content: center;
+            gap: 12px;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+
+        .section-label {
+            font-family: 'Cinzel', serif;
+            font-size: 12px; font-weight: 600;
+            letter-spacing: 0.25em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            text-align: center;
+            text-shadow: 0 0 12px rgba(91,158,232,0.3);
         }
 
         .role-grid {
             display: grid;
-            grid-auto-flow: column;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            grid-template-rows: repeat(2, minmax(0, 1fr));
-            gap: 15px;
-            height: 40%;
-        }
-    
-        .role-card {
-            border-radius: 12px;
-            overflow: hidden;
-            border: 5px solid transparent;
-            opacity: 0.5;
-            /* width: 100px; */
-            /* aspect-ratio: 0.64 / 1; */
-        }
-    
-        .role-card img {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 9px;
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-            cursor: pointer;
-        }
-    
-        .role-card input {
-            display: none;
-        }
-    
-        .role-card:has(input:checked) {
-            border-color: #fde295;
-            opacity: 1;
-        }
-    
-        .role-card input:disabled+img {
-            filter: grayscale(75%);
-            cursor: not-allowed;
         }
 
-        .btn-group {
-            display: flex;
+        .role-card {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            background: var(--bg-card);
+            border: 3px solid rgba(91,158,232,0.12);
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+            aspect-ratio: 0.72 / 1;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+        }
+        .role-card:active { transform: scale(0.97); }
+        .role-card img {
+            width: 100%; height: 100%;
+            object-fit: cover; display: block;
+            filter: brightness(0.32) saturate(0.18) grayscale(0.65);
+            transition: filter 0.3s ease;
+        }
+        .role-card input { display: none; }
+
+        .role-name {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 22px 4px 8px;
+            background: linear-gradient(to top, rgba(2,4,10,0.97) 0%, rgba(2,4,10,0.78) 55%, transparent 100%);
+            font-family: 'Cinzel', serif;
+            font-size: 10px; font-weight: 700;
+            letter-spacing: 0.12em;
+            text-align: center;
+            color: #d8dcf0;
+            z-index: 2;
+            text-transform: uppercase;
+            transition: color 0.2s;
+        }
+
+        /* locked always-on */
+        .role-card.is-locked { cursor: default; }
+        .role-card.is-locked:has(input:checked) {
+            border-color: var(--blue-dim);
+            box-shadow: 0 0 14px var(--blue-glow), 0 3px 10px rgba(0,0,0,0.35);
+        }
+        .role-card.is-locked:has(input:checked) img { filter: brightness(0.75) saturate(0.85); }
+
+        /* good selected */
+        .role-card.good:has(input:checked) {
+            border-color: var(--blue);
+            box-shadow: 0 0 20px var(--blue-glow), 0 0 6px rgba(91,158,232,0.5), 0 3px 10px rgba(0,0,0,0.35);
+            animation: pulseBlue 2.2s ease-in-out infinite;
+        }
+        .role-card.good:has(input:checked) img { filter: brightness(1.08) saturate(1.15); }
+        .role-card.good:has(input:checked) .role-name { color: #aed4ff; }
+        .role-card.good:not(:has(input:disabled)):not(:has(input:checked)):hover img { filter: brightness(0.5) saturate(0.4); }
+
+        /* evil selected */
+        .role-card.evil:has(input:checked) {
+            border-color: var(--crimson);
+            box-shadow: 0 0 20px var(--crimson-glow), 0 0 6px rgba(224,90,90,0.5), 0 3px 10px rgba(0,0,0,0.35);
+            animation: pulseRed 2.2s ease-in-out infinite;
+        }
+        .role-card.evil:has(input:checked) img { filter: brightness(1.08) saturate(1.15); }
+        .role-card.evil:has(input:checked) .role-name { color: #ffb8b8; }
+        .role-card.evil:not(:has(input:disabled)):not(:has(input:checked)):hover img { filter: brightness(0.5) saturate(0.4); }
+
+        @keyframes pulseBlue {
+            0%, 100% { box-shadow: 0 0 20px var(--blue-glow), 0 0 6px rgba(91,158,232,0.5), 0 3px 10px rgba(0,0,0,0.35); }
+            50%      { box-shadow: 0 0 28px var(--blue-glow), 0 0 10px rgba(91,158,232,0.6), 0 3px 10px rgba(0,0,0,0.35); }
+        }
+        @keyframes pulseRed {
+            0%, 100% { box-shadow: 0 0 20px var(--crimson-glow), 0 0 6px rgba(224,90,90,0.5), 0 3px 10px rgba(0,0,0,0.35); }
+            50%      { box-shadow: 0 0 28px var(--crimson-glow), 0 0 10px rgba(224,90,90,0.6), 0 3px 10px rgba(0,0,0,0.35); }
+        }
+
+        /* disabled-unchecked */
+        .role-card:has(input:disabled:not(:checked)) { opacity: 0.25; cursor: not-allowed; }
+        .role-card:has(input:disabled:not(:checked)) img { filter: grayscale(1) brightness(0.25); }
+
+        /* ════════════════════════════════
+           PHASE 2 — PLAYING
+        ════════════════════════════════ */
+        #playPhase {
+            display: none;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
+            flex: 1;
+            width: 100%;
+            max-width: 480px;
             gap: 20px;
         }
-        
+
+        #charDisplay {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 14px;
+            width: 100%;
+            height: 28vh;
+            min-height: 110px;
+            flex-shrink: 0;
+        }
+        #charDisplay:empty { display: none; }
+
+        .char-img-wrap {
+            position: relative;
+            height: 100%;
+            aspect-ratio: 0.72 / 1;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 3px solid rgba(91,158,232,0.35);
+            flex-shrink: 0;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+            animation: charPop 0.35s cubic-bezier(.34,1.56,.64,1);
+        }
+        @keyframes charPop {
+            from { opacity: 0; transform: translateY(10px) scale(0.92); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .char-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+
+        .char-img-wrap .char-name {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 26px 4px 9px;
+            background: linear-gradient(to top, rgba(2,4,10,0.97) 0%, rgba(2,4,10,0.8) 55%, transparent 100%);
+            font-family: 'Cinzel', serif;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.1em;
+            text-align: center;
+            color: #d8dcf0;
+            z-index: 2;
+            text-transform: uppercase;
+        }
+        .char-img-wrap.char-good { border-color: var(--blue); box-shadow: 0 0 18px var(--blue-glow), 0 6px 20px rgba(0,0,0,0.45); }
+        .char-img-wrap.char-good .char-name { color: #aed4ff; }
+        .char-img-wrap.char-evil { border-color: var(--crimson); box-shadow: 0 0 18px var(--crimson-glow), 0 6px 20px rgba(0,0,0,0.45); }
+        .char-img-wrap.char-evil .char-name { color: #ffb8b8; }
+
+        .ban-overlay {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.5);
+            z-index: 3;
+        }
+        .ban-overlay svg { width: 50%; height: 50%; opacity: 0.95; filter: drop-shadow(0 0 6px rgba(224,40,40,0.6)); }
+
+        #scriptText {
+            width: 100%;
+            text-align: center;
+            font-size: clamp(17px, 4.5vw, 22px);
+            font-weight: 500;
+            line-height: 1.7;
+            color: var(--text-main);
+            letter-spacing: 0.01em;
+            padding: 20px 22px;
+            border-radius: 16px;
+            background: rgba(91,158,232,0.08);
+            border: 1.5px solid rgba(91,158,232,0.22);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 14px rgba(0,0,0,0.25);
+            animation: textFade 0.3s ease;
+        }
+        @keyframes textFade { from { opacity: 0.3; } to { opacity: 1; } }
+
+        /* ── BUTTONS — translucent glass with color ── */
+        .btn-group { display: flex; gap: 10px; flex-shrink: 0; padding-bottom: 4px; }
+
         button {
-            padding: 12px 28px;
-            font-size: 18px;
-            font-weight: bold;
+            font-family: 'Cinzel', serif;
+            font-size: 14px; font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 14px 28px;
             border-radius: 50rem;
             cursor: pointer;
-            border: 3px solid #fff;
-            background-color: #00000080;
-            color: white;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+            outline: none;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
-    
-        button:hover {
-            transform: scale(1.05);
+        button:active { transform: scale(0.95); }
+
+        #playBtn {
+            background: rgba(91,158,232,0.18);
+            border: 1.5px solid rgba(91,158,232,0.6);
+            color: #bcdcff;
+            box-shadow: 0 0 18px rgba(91,158,232,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
         }
-    
-        #scriptText {
-            font-size: 22px;
-            height: 30%; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
+        #playBtn:hover {
+            background: rgba(91,158,232,0.28);
+            box-shadow: 0 0 26px rgba(91,158,232,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        #pauseBtn {
+            background: rgba(92,186,122,0.16);
+            border: 1.5px solid rgba(92,186,122,0.55);
+            color: #b8eec8;
+            box-shadow: 0 0 16px rgba(92,186,122,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        #pauseBtn:hover {
+            background: rgba(92,186,122,0.26);
+            box-shadow: 0 0 22px rgba(92,186,122,0.4);
+        }
+
+        #endBtn {
+            background: rgba(224,90,90,0.16);
+            border: 1.5px solid rgba(224,90,90,0.55);
+            color: #ffc4c4;
+            box-shadow: 0 0 16px rgba(224,90,90,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        #endBtn:hover {
+            background: rgba(224,90,90,0.26);
+            box-shadow: 0 0 22px rgba(224,90,90,0.4);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
         }
     </style>
 </head>
-
 <body>
-    <div id="container">
-        <div>
-            <img src="images/logo.png" alt="Logo" class="logo">
-        </div>
-        <div class="role-grid">
-            <label class="role-card">
-                <input type="checkbox" name="roles" value="Merlin" checked disabled>
-                <img src="images/merlin.png" alt="Merlin">
-            </label>
-            <label class="role-card">
-                <input type="checkbox" name="roles" value="Assassin" checked disabled>
-                <img src="images/assassin.png" alt="Assassin">
-            </label>
-            <label class="role-card">
-                <input type="checkbox" name="roles" value="Percival">
-                <img src="images/percival.png" alt="Percival">
-            </label>
-            <label class="role-card">
-                <input type="checkbox" name="roles" value="Morgana" disabled>
-                <img src="images/morgana.png" alt="Morgana">
-            </label>
-            <label class="role-card">
-                <input type="checkbox" name="roles" value="Mordred">
-                <img src="images/mordred.png" alt="Mordred">
-            </label>
-            <label class="role-card">
-                <input type="checkbox" name="roles" value="Oberon">
-                <img src="images/oberon.png" alt="Oberon">
-            </label>
-        </div>
-        <div id="scriptText"></div>
-        <div class="btn-group">
-            <button id="playBtn" class="play">เล่น</button>
-            <button id="pauseBtn" class="pause" style="display:none;">หยุด</button>
-            <button id="endBtn" class="end" style="display:none;">จบ</button>
-        </div>
-        <audio id="player"></audio>
-        <audio id="bgm" src="audio/bgm.mp3" loop></audio>
+
+    <div class="logo-wrap">
+        <img src="images/logo.png" alt="Avalon" class="logo">
     </div>
 
+    <!-- PHASE 1: SETUP -->
+    <div id="setupPhase">
+        <p class="section-label">เลือก Role พิเศษ</p>
+        <div class="role-grid">
+            <label class="role-card is-locked good">
+                <input type="checkbox" name="roles" value="Merlin" checked disabled>
+                <img src="images/merlin.png" alt="Merlin">
+                <span class="role-name">Merlin</span>
+            </label>
+            <label class="role-card is-locked evil">
+                <input type="checkbox" name="roles" value="Assassin" checked disabled>
+                <img src="images/assassin.png" alt="Assassin">
+                <span class="role-name">Assassin</span>
+            </label>
+            <label class="role-card good">
+                <input type="checkbox" name="roles" value="Percival">
+                <img src="images/percival.png" alt="Percival">
+                <span class="role-name">Percival</span>
+            </label>
+            <label class="role-card evil">
+                <input type="checkbox" name="roles" value="Morgana" disabled>
+                <img src="images/morgana.png" alt="Morgana">
+                <span class="role-name">Morgana</span>
+            </label>
+            <label class="role-card evil">
+                <input type="checkbox" name="roles" value="Mordred">
+                <img src="images/mordred.png" alt="Mordred">
+                <span class="role-name">Mordred</span>
+            </label>
+            <label class="role-card evil">
+                <input type="checkbox" name="roles" value="Oberon">
+                <img src="images/oberon.png" alt="Oberon">
+                <span class="role-name">Oberon</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- PHASE 2: PLAYING -->
+    <div id="playPhase">
+        <div id="charDisplay"></div>
+        <div id="scriptText"></div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="btn-group">
+        <button id="playBtn">เล่น</button>
+        <button id="pauseBtn" style="display:none;">หยุด</button>
+        <button id="endBtn"   style="display:none;">จบ</button>
+    </div>
+
+    <audio id="player"></audio>
+    <audio id="bgm" src="audio/bgm.mp3" loop></audio>
+
     <script>
-        // ===== STATE MACHINE =====
-        const STATE = {
-            IDLE: "idle",
-            PLAYING: "playing",
-            WAITING: "waiting",
-            PAUSED: "paused"
+        const STATE = { IDLE:"idle", PLAYING:"playing", WAITING:"waiting", PAUSED:"paused" };
+        let state = STATE.IDLE;
+        let dialogue = [], current = 0;
+        let startDelayTimeout = null;
+        let defaultDelay = 0, delayRemaining = 0, delayTimeout = null, delayStart = 0;
+
+        const player      = document.getElementById("player");
+        const scriptText  = document.getElementById("scriptText");
+        const charDisplay = document.getElementById("charDisplay");
+        const playBtn     = document.getElementById("playBtn");
+        const pauseBtn    = document.getElementById("pauseBtn");
+        const endBtn      = document.getElementById("endBtn");
+        const bgm         = document.getElementById("bgm");
+        const setupPhase  = document.getElementById("setupPhase");
+        const playPhase   = document.getElementById("playPhase");
+
+        const CHARS = {
+            Merlin:   { src:"images/merlin.png",   side:"good" },
+            Percival: { src:"images/percival.png",  side:"good" },
+            Morgana:  { src:"images/morgana.png",   side:"evil" },
+            Mordred:  { src:"images/mordred.png",   side:"evil" },
+            Oberon:   { src:"images/oberon.png",    side:"evil" },
+            Assassin: { src:"images/assassin.png",  side:"evil" },
         };
 
-        let state = STATE.IDLE;
-        let dialogue = [];
-        let current = 0;
+        function makeCharCard(name, banned=false) {
+            const c = CHARS[name];
+            const wrap = document.createElement("div");
+            wrap.className = `char-img-wrap char-${c.side}`;
+            const img = document.createElement("img");
+            img.src = c.src; img.alt = name;
+            wrap.appendChild(img);
+            const label = document.createElement("span");
+            label.className = "char-name"; label.textContent = name;
+            wrap.appendChild(label);
+            if (banned) {
+                const overlay = document.createElement("div");
+                overlay.className = "ban-overlay";
+                overlay.innerHTML = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#ff4040" stroke-width="9"/>
+                    <line x1="18" y1="18" x2="82" y2="82" stroke="#ff4040" stroke-width="9" stroke-linecap="round"/>
+                </svg>`;
+                wrap.appendChild(overlay);
+            }
+            return wrap;
+        }
 
-        let startDelayTimeout = null;
-        let defaultDelay = 0;
-        let delayRemaining = 0;
-        let delayTimeout = null;
-        let delayStart = 0;
-
-        const player = document.getElementById("player");
-        const scriptText = document.getElementById("scriptText");
-        const playBtn = document.getElementById("playBtn");
-        const pauseBtn = document.getElementById("pauseBtn");
-        const endBtn = document.getElementById("endBtn");
-
-        const bgm = document.getElementById("bgm");
+        function showChars(chars) {
+            charDisplay.innerHTML = "";
+            if (!chars || chars.length === 0) {
+                playPhase.style.justifyContent = "center";
+                charDisplay.style.display = "none";
+            } else {
+                playPhase.style.justifyContent = "center";
+                charDisplay.style.display = "flex";
+                chars.forEach(c => charDisplay.appendChild(makeCharCard(c.name, c.banned)));
+            }
+        }
 
         function buildDialogue() {
-            // ดึง roles ที่ถูกเลือก
-            const roles = Array.from(document.querySelectorAll('input[name="roles"]:checked'))
-                .map(cb => cb.value);
-
+            const roles = Array.from(document.querySelectorAll('input[name="roles"]:checked')).map(cb => cb.value);
             dialogue = [];
 
-            dialogue.push({
-                scripts: "ทุกคนหลับตาพร้อมกับกำมือไว้หน้าตัวเอง",
-                audio: "audio/sound1.mp3",
-                // delay: 3000
-            });
+            dialogue.push({ scripts:"ทุกคนหลับตาพร้อมกับกำมือไว้หน้าตัวเอง", audio:"audio/sound1.mp3", chars:[] });
 
-            // Oberon
             if (roles.includes("Oberon")) {
-                dialogue.push({
-                    scripts: "บริวารของมอร์เดร็ดทุกคนยกเว้นโอเบรอนลืมตา และมองรอบๆ เพื่อจดจำพรรคพวกของตนเอง",
-                    audio: "audio/sound2.mp3",
-                    delay: 3000
-                });
+                dialogue.push({ scripts:"บริวารของมอร์เดร็ดทุกคนยกเว้นโอเบรอนลืมตา และมองรอบๆ เพื่อจดจำพรรคพวกของตนเอง", audio:"audio/sound2.mp3", delay:3000, chars:[{name:"Oberon",banned:true}] });
             } else {
-                dialogue.push({
-                    scripts: "บริวารของมอร์เดร็ดทุกคนลืมตา และมองรอบๆ เพื่อจดจำพรรคพวกของตนเอง",
-                    audio: "audio/sound3.mp3",
-                    delay: 3000
-                });
+                dialogue.push({ scripts:"บริวารของมอร์เดร็ดทุกคนลืมตา และมองรอบๆ เพื่อจดจำพรรคพวกของตนเอง", audio:"audio/sound3.mp3", delay:3000, chars:[] });
             }
 
-            dialogue.push({
-                scripts: "บริวารของมอร์เดร็ดหลับตา",
-                audio: "audio/sound4.mp3",
-                // delay: 2000
-            });
+            dialogue.push({ scripts:"บริวารของมอร์เดร็ดหลับตา", audio:"audio/sound4.mp3", chars:[] });
 
-            // dialogue.push({
-            //     scripts: "ผู้เล่นทุกคนจะต้องหลับตาให้สนิทและกำมือไว้ข้างหน้าของตน",
-            //     audio: "audio/sound5.mp3",
-            //     delay: 3000
-            // });
-
-            // Mordred
             if (roles.includes("Mordred")) {
-                dialogue.push({
-                    scripts: "บริวารของมอร์เดร็ดยกเว้นมอร์เดร็ดชูนิ้วโป้งขึ้นมา เพื่อที่เมอร์ลินจะได้เห็นทุกคน",
-                    audio: "audio/sound6.mp3",
-                    delay: 2000
-                });
+                dialogue.push({ scripts:"บริวารของมอร์เดร็ดยกเว้นมอร์เดร็ดชูนิ้วโป้งขึ้นมา เพื่อที่เมอร์ลินจะได้เห็นทุกคน", audio:"audio/sound6.mp3", delay:2000, chars:[{name:"Mordred",banned:true}] });
             } else {
-                dialogue.push({
-                    scripts: "บริวารของมอร์เดร็ดชูนิ้วโป้งขึ้นมา เพื่อที่เมอร์ลินจะได้เห็นทุกคน",
-                    audio: "audio/sound7.mp3",
-                    delay: 2000
-                });
+                dialogue.push({ scripts:"บริวารของมอร์เดร็ดชูนิ้วโป้งขึ้นมา เพื่อที่เมอร์ลินจะได้เห็นทุกคน", audio:"audio/sound7.mp3", delay:2000, chars:[] });
             }
 
-            dialogue.push({
-                scripts: "เมอร์ลิน ลืมตาและมองตัวแทนของฝ่ายร้าย",
-                audio: "audio/sound8.mp3",
-                delay: 3000
-            });
+            dialogue.push({ scripts:"เมอร์ลิน ลืมตาและมองตัวแทนของฝ่ายร้าย", audio:"audio/sound8.mp3", delay:3000, chars:[{name:"Merlin"}] });
+            dialogue.push({ scripts:"บริวารของมอร์เดร็ดเก็บนิ้วโป้ง แล้วกำมือ", audio:"audio/sound9.mp3", chars:[] });
+            dialogue.push({ scripts:"เมอร์ลินหลับตาได้", audio:"audio/sound10.mp3", chars:[{name:"Merlin"}] });
 
-            dialogue.push({
-                scripts: "บริวารของมอร์เดร็ดเก็บนิ้วโป้ง แล้วกำมือ",
-                audio: "audio/sound9.mp3",
-                // delay: 2000
-            });
-
-            dialogue.push({
-                scripts: "เมอร์ลินหลับตาได้",
-                audio: "audio/sound10.mp3",
-                // delay: 2000
-            });
-
-            // Percival
             if (roles.includes("Percival")) {
-                // Morgana
                 if (roles.includes("Morgana")) {
-                    dialogue.push({
-                        scripts: "เมอร์ลินและมอร์กานาชูนิ้วโป้ง เพื่อที่เพอร์ชีวอลจะได้มองเห็น",
-                        audio: "audio/sound11.mp3",
-                        delay: 2000
-                    });
-
-                    dialogue.push({
-                        scripts: "เพอร์ชีวอลลืมตามามอง หนึ่งในนี้คือเมอร์ลินและอีกคนคือมอร์กานา",
-                        audio: "audio/sound12.mp3",
-                        delay: 3000
-                    });
-
-                    dialogue.push({
-                        scripts: "เมอร์ลินและมอร์กานาเก็บนิ้วและกำมือไว้หน้าตัวเอง",
-                        audio: "audio/sound13.mp3",
-                        // delay: 2000
-                    });
+                    dialogue.push({ scripts:"เมอร์ลินและมอร์กานาชูนิ้วโป้ง เพื่อที่เพอร์ชีวอลจะได้มองเห็น", audio:"audio/sound11.mp3", delay:2000, chars:[{name:"Merlin"},{name:"Morgana"}] });
+                    dialogue.push({ scripts:"เพอร์ชีวอลลืมตามามอง หนึ่งในนี้คือเมอร์ลินและอีกคนคือมอร์กานา", audio:"audio/sound12.mp3", delay:3000, chars:[{name:"Percival"}] });
+                    dialogue.push({ scripts:"เมอร์ลินและมอร์กานาเก็บนิ้วและกำมือไว้หน้าตัวเอง", audio:"audio/sound13.mp3", chars:[{name:"Merlin"},{name:"Morgana"}] });
                 } else {
-                    dialogue.push({
-                        scripts: "เมอร์ลินชูนิ้วโป้ง เพื่อที่เพอร์ชีวอลจะได้มองเห็น",
-                        audio: "audio/sound14.mp3",
-                        delay: 2000
-                    });
-
-                    dialogue.push({
-                        scripts: "เพอร์ชีวอลลืมตามามอง นี่คือเมอร์ลิน",
-                        audio: "audio/sound15.mp3",
-                        delay: 3000
-                    });
-
-                    dialogue.push({
-                        scripts: "เมอร์ลินเก็บนิ้วและกำมือไว้หน้าตัวเอง",
-                        audio: "audio/sound16.mp3",
-                        // delay: 2000
-                    });
+                    dialogue.push({ scripts:"เมอร์ลินชูนิ้วโป้ง เพื่อที่เพอร์ชีวอลจะได้มองเห็น", audio:"audio/sound14.mp3", delay:2000, chars:[{name:"Merlin"}] });
+                    dialogue.push({ scripts:"เพอร์ชีวอลลืมตามามอง นี่คือเมอร์ลิน", audio:"audio/sound15.mp3", delay:3000, chars:[{name:"Percival"}] });
+                    dialogue.push({ scripts:"เมอร์ลินเก็บนิ้วและกำมือไว้หน้าตัวเอง", audio:"audio/sound16.mp3", chars:[{name:"Merlin"}] });
                 }
-
-                dialogue.push({
-                    scripts: "เพอร์ชีวอลหลับตา",
-                    audio: "audio/sound17.mp3",
-                    // delay: 2000
-                });
+                dialogue.push({ scripts:"เพอร์ชีวอลหลับตา", audio:"audio/sound17.mp3", chars:[{name:"Percival"}] });
             }
 
-            dialogue.push({
-                scripts: "ทุกคนลืมตาได้",
-                audio: "audio/sound18.mp3",
-                // delay: 3000
-            });
+            dialogue.push({ scripts:"ทุกคนลืมตาได้", audio:"audio/sound18.mp3", chars:[] });
         }
-        
-        // ===== PLAY BUTTON =====
+
         playBtn.onclick = () => {
             buildDialogue();
             current = 0;
-
-            bgm.currentTime = 0;
-            bgm.volume = 0.3;
-            bgm.play();
-
-            scriptText.innerHTML = "เตรียมตัว...";
+            bgm.currentTime = 0; bgm.volume = 0.2; bgm.play();
+            setupPhase.style.display = "none";
+            playPhase.style.display  = "flex";
+            charDisplay.innerHTML = "";
+            charDisplay.style.display = "none";
+            scriptText.textContent = "เตรียมตัว…";
             playBtn.style.display = "none";
-            endBtn.style.display = "inline-block";
-            
+            endBtn.style.display  = "inline-block";
             startDelayTimeout = setTimeout(() => {
                 pauseBtn.style.display = "inline-block";
                 playCurrent();
             }, 3000);
         };
 
-        // ===== PLAY STEP =====
         function playCurrent() {
-            if (current >= dialogue.length) {
-                endGame();
-                return;
-            }
-
+            if (current >= dialogue.length) { endGame(); return; }
             state = STATE.PLAYING;
-
-            scriptText.innerHTML = dialogue[current].scripts;
-            player.src = dialogue[current].audio;
+            const step = dialogue[current];
+            scriptText.textContent = step.scripts;
+            showChars(step.chars);
+            player.src = step.audio;
             player.play();
         }
 
-        // ===== AUDIO END =====
         player.onended = () => {
             state = STATE.WAITING;
-            
             delayRemaining = dialogue[current].delay ?? defaultDelay;
             delayStart = Date.now();
-
             delayTimeout = setTimeout(nextStep, delayRemaining);
         };
 
-        // ===== NEXT =====
-        function nextStep() {
-            current++;
-            playCurrent();
-        }
+        function nextStep() { current++; playCurrent(); }
 
-        // ===== PAUSE / RESUME =====
         pauseBtn.onclick = () => {
             if (state === STATE.PLAYING) {
-                player.pause();
-                bgm.pause();
-                state = STATE.PAUSED;
-                pauseBtn.innerText = "เล่นต่อ";
+                player.pause(); bgm.pause();
+                state = STATE.PAUSED; pauseBtn.innerText = "เล่นต่อ";
             } else if (state === STATE.WAITING) {
-                bgm.pause();
-                clearTimeout(delayTimeout);
-                const elapsed = Date.now() - delayStart;
-                delayRemaining -= elapsed;
-                state = STATE.PAUSED;
-                pauseBtn.innerText = "เล่นต่อ";
+                bgm.pause(); clearTimeout(delayTimeout);
+                delayRemaining -= Date.now() - delayStart;
+                state = STATE.PAUSED; pauseBtn.innerText = "เล่นต่อ";
             } else if (state === STATE.PAUSED) {
                 if (player.currentTime > 0 && player.currentTime < player.duration) {
-                    player.play();
-                    bgm.play();
-                    state = STATE.PLAYING;
+                    player.play(); bgm.play(); state = STATE.PLAYING;
                 } else if (delayRemaining > 0) {
-                    bgm.play();
-                    state = STATE.WAITING;
+                    bgm.play(); state = STATE.WAITING;
                     delayStart = Date.now();
                     delayTimeout = setTimeout(nextStep, delayRemaining);
                 }
-
                 pauseBtn.innerText = "หยุด";
             }
         };
 
-        // ===== END GAME =====
         endBtn.onclick = endGame;
-
         function endGame() {
-            clearTimeout(startDelayTimeout);
-            clearTimeout(delayTimeout);
-
-            player.pause();
-            player.currentTime = 0;
-
-            bgm.pause();
-            bgm.currentTime = 0;
-            
-            state = STATE.IDLE;
-
-            current = 0;
-            scriptText.innerHTML = "";
-
-            playBtn.style.display = "inline-block";
+            clearTimeout(startDelayTimeout); clearTimeout(delayTimeout);
+            player.pause(); player.currentTime = 0;
+            bgm.pause(); bgm.currentTime = 0;
+            state = STATE.IDLE; current = 0;
+            playPhase.style.display  = "none";
+            setupPhase.style.display = "flex";
+            playBtn.style.display  = "inline-block";
             pauseBtn.style.display = "none";
-            endBtn.style.display = "none";
+            endBtn.style.display   = "none";
             pauseBtn.innerText = "หยุด";
         }
 
-        // ===== ROLE CONDITION CONTROL =====
-        const percivalCheckbox = document.querySelector('input[value="Percival"]');
-        const morganaCheckbox = document.querySelector('input[value="Morgana"]');
-
-        morganaCheckbox.disabled = true;
-
-        percivalCheckbox.addEventListener("change", function () {
-            if (this.checked) {
-                morganaCheckbox.disabled = false;
-            } else {
-                morganaCheckbox.checked = false;
-                morganaCheckbox.disabled = true;
-            }
+        const percivalCb = document.querySelector('input[value="Percival"]');
+        const morganaCb  = document.querySelector('input[value="Morgana"]');
+        morganaCb.disabled = true;
+        percivalCb.addEventListener("change", function () {
+            if (this.checked) { morganaCb.disabled = false; }
+            else { morganaCb.checked = false; morganaCb.disabled = true; }
         });
     </script>
 </body>
