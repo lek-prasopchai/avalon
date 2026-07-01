@@ -388,6 +388,18 @@
         let state = STATE.IDLE;
         let dialogue = [], current = 0;
         let startDelayTimeout = null;
+
+        let audioCtx = null, bgmGainNode = null, bgmSourceNode = null;
+        const BGM_VOLUME = 0.2;
+
+        function setupBgmGain() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            bgmSourceNode = audioCtx.createMediaElementSource(bgm);
+            bgmGainNode = audioCtx.createGain();
+            bgmGainNode.gain.value = BGM_VOLUME;
+            bgmSourceNode.connect(bgmGainNode).connect(audioCtx.destination);
+        }
         let defaultDelay = 0, delayRemaining = 0, delayTimeout = null, delayStart = 0;
 
         const player      = document.getElementById("player");
@@ -486,7 +498,9 @@
         playBtn.onclick = () => {
             buildDialogue();
             current = 0;
-            bgm.currentTime = 0; bgm.volume = 0.2; bgm.play();
+            setupBgmGain();
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            bgm.currentTime = 0; bgm.play();
             setupPhase.style.display = "none";
             playPhase.style.display  = "flex";
             charDisplay.innerHTML = "";
